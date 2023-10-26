@@ -5,9 +5,24 @@
 
 #pragma once
 #include "FastWin.h"
+#include "GTException.h"
 
 class Window
 {
+public:
+	class Exception : public GTException
+	{
+	public:
+		Exception(int line, const char* file, HRESULT hr) noexcept;
+		const char* what() const noexcept override;
+		virtual const char* GetType() const noexcept;
+		static std::string TranslateErrorCode(HRESULT hr) noexcept;
+		HRESULT GetErrorCode() const noexcept;
+		std::string GetErrorString() const noexcept;
+
+	private:
+		HRESULT hr;
+	};
 private:
 	// singleton manages registration/cleanup of window class
 	class WindowClass
@@ -27,7 +42,7 @@ private:
 		HINSTANCE hInst;	// Stores the instance.
 	};
 public:
-	Window(int width, int height, const char* name) noexcept;
+	Window(int width, int height, const char* name);
 	// Constructor to create the window.
 	~Window();
 	// Destroys the window.
@@ -45,3 +60,7 @@ private:
 	int height;
 	HWND hWnd;	// Handle to the window.
 };
+
+// error exception helper macro
+#define GTWND_EXCEPT( hr ) Window::Exception( __LINE__,__FILE__,hr )
+#define GTWND_LAST_EXCEPT() Window::Exception( __LINE__,__FILE__,GetLastError() )

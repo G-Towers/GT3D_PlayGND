@@ -8,23 +8,39 @@ int CALLBACK WinMain(
 	LPSTR     _In_ lpCmdLine,
 	int       _In_ nCmdShow)
 {
-	Window wnd(800, 300, "GT3D Playground");	// Instantiatiate the window.
-
-	MSG msg;
-	BOOL gResult;
-	while ((gResult = GetMessage(&msg, nullptr, 0, 0)) > 0)
+	try
 	{
-		// TranslateMessage will post auxilliary WM_CHAR messages from key msgs
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+		Window wnd(800, 300, "GT3D Playground");	// Instantiatiate the window.
 
-	// check if GetMessage call itself borked
-	if (gResult == -1)
+		MSG msg;
+		BOOL gResult;
+		while ((gResult = GetMessage(&msg, nullptr, 0, 0)) > 0)
+		{
+			// TranslateMessage will post auxilliary WM_CHAR messages from key msgs
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		// check if GetMessage call itself borked
+		if (gResult == -1)
+		{
+			throw GTWND_LAST_EXCEPT();
+		}
+
+		// wParam here is the value passed to PostQuitMessage
+		return (int)msg.wParam;
+	}
+	catch (const GTException& e)
 	{
-		return -1;
+		MessageBox(nullptr, e.what(), e.GetType(), MB_OK | MB_ICONEXCLAMATION);
 	}
-
-	// wParam here is the value passed to PostQuitMessage
-	return (int)msg.wParam;
+	catch (const std::exception& e)
+	{
+		MessageBox(nullptr, e.what(), "Standard Exception", MB_OK | MB_ICONEXCLAMATION);
+	}
+	catch (...)
+	{
+		MessageBox(nullptr, "No details available", "Unknown Exception", MB_OK | MB_ICONEXCLAMATION);
+	}
+	return -1;
 }
