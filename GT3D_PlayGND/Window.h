@@ -6,6 +6,7 @@
 #pragma once
 #include "FastWin.h"
 #include "GTException.h"
+#include "Keyboard.h"
 
 class Window
 {
@@ -55,6 +56,10 @@ private:
 	// Adapts from win32 calling convention to C++ member call convention.
 	LRESULT HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
 	// The Message handler.
+
+public:
+	Keyboard kbd;
+
 private:
 	int width;	// Dimensions of the window.
 	int height;
