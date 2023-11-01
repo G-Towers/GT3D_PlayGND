@@ -1,6 +1,7 @@
 // Main window.
 
 #include "Window.h"
+#include <sstream>
 
 int CALLBACK WinMain(
 	HINSTANCE _In_ hInstance,
@@ -19,9 +20,56 @@ int CALLBACK WinMain(
 			// TranslateMessage will post auxilliary WM_CHAR messages from key msgs
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-			if (wnd.kbd.KeyIsPressed(VK_MENU))
+
+			//// Test keyboard.
+			//if (wnd.kbd.KeyIsPressed(VK_MENU))
+			//{
+			//	MessageBox(nullptr, "ALT Key Pressed.", "Key Test", MB_OK);
+			//}
+
+			//// Test mouse capture.
+			//while (!wnd.mouse.IsEmpty())
+			//{
+			//	const auto e = wnd.mouse.Read();
+			//	switch (e.GetType())
+			//	{
+			//	case Mouse::Event::Type::Leave:
+			//		wnd.SetTitle("Gone!");
+			//		break;
+			//	case Mouse::Event::Type::Move:
+			//	{
+			//		std::ostringstream oss;
+			//		oss << "Mouse moved to (" << e.GetPosX() << "," << e.GetPosY() << ")";
+			//		wnd.SetTitle(oss.str());
+			//	}
+			//	break;
+			//	}
+			//}
+
+			// Test wheel delta
+			static int i = 0;
+			while (!wnd.mouse.IsEmpty())
 			{
-				MessageBox(nullptr, "ALT Key Pressed.", "Key Test", MB_OK);
+				const auto e = wnd.mouse.Read();
+				switch (e.GetType())
+				{
+				case Mouse::Event::Type::WheelUp:
+					i++;
+					{
+						std::ostringstream oss;
+						oss << "Up: " << i;
+						wnd.SetTitle(oss.str());
+					}
+					break;
+				case Mouse::Event::Type::WheelDown:
+					i--;
+					{
+						std::ostringstream oss;
+						oss << "Down: " << i;
+						wnd.SetTitle(oss.str());
+					}
+					break;
+				}
 			}
 		}
 

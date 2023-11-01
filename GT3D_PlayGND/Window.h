@@ -7,6 +7,7 @@
 #include "FastWin.h"
 #include "GTException.h"
 #include "Keyboard.h"
+#include "Mouse.h"
 
 class Window
 {
@@ -49,6 +50,7 @@ public:
 	// Destroys the window.
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
+	void SetTitle(const std::string& title);
 private:
 	static LRESULT CALLBACK HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
 	// Only sets up the pointer to the instance and installs the second handler.
@@ -59,6 +61,7 @@ private:
 
 public:
 	Keyboard kbd;
+	Mouse mouse;
 
 private:
 	int width;	// Dimensions of the window.
