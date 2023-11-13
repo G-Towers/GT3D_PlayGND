@@ -141,6 +141,7 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="FastWin.h" />
+    <ClInclude Include="Graphics.h" />
     <ClInclude Include="GTException.h" />
     <ClInclude Include="GTTimer.h" />
     <ClInclude Include="Keyboard.h" />
@@ -150,6 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="Graphics.cpp" />
     <ClCompile Include="GTException.cpp" />
     <ClCompile Include="GTTimer.cpp" />
     <ClCompile Include="Keyboard.cpp" />
