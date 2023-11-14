@@ -55,7 +55,8 @@ public:
 	Window& operator=(const Window&) = delete;
 	void SetTitle(const std::string& title);
 	static std::optional<int> ProcessMessages() noexcept;
-	Graphics& Gfx();
+	Graphics& Gfx();	// The construction of Gfx is deferred because hWnd is not aquired yet.
+						// So, accessor is created to access the embedded graphics.
 private:
 	static LRESULT CALLBACK HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
 	// Only sets up the pointer to the instance and installs the second handler.
@@ -72,7 +73,7 @@ private:
 	int width;	// Dimensions of the window.
 	int height;
 	HWND hWnd;	// Handle to the window.
-	std::unique_ptr<Graphics> pGfx;
+	std::unique_ptr<Graphics> pGfx;	// Pointer to Gfx. Allows Gfx to be deferred (postponed).
 };
 
 // error exception helper macro

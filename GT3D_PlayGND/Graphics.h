@@ -2,7 +2,7 @@
 
 #pragma once
 #include "FastWin.h"
-#include <d3d11.h>
+#include <d3d11.h>	// Contains declarations of functions and types for d3d11.
 
 
 class Graphics
@@ -12,17 +12,17 @@ public:
 	Graphics(const Graphics&) = delete;
 	Graphics& operator=(const Graphics&) = delete;
 	~Graphics();
-	void EndFrame();	// Present the frame.
-	void ClearBuffer(float red, float green, float blue) noexcept
+	void EndFrame();	// Presents the back buffer to the front buffer (flipping).
+	void ClearBuffer(float red, float green, float blue) noexcept	// Clears the back buffer.
 	{
 		const float color[] = { red, green, blue, 1.0f };
 		pContext->ClearRenderTargetView(pTarget, color);
 	}
 
 private:
-	ID3D11Device* pDevice = nullptr;
-	IDXGISwapChain* pSwap = nullptr;
-	ID3D11DeviceContext* pContext = nullptr;
-	ID3D11RenderTargetView* pTarget = nullptr;
+	ID3D11Device* pDevice = nullptr;	// Pointer to the Device.
+	IDXGISwapChain* pSwap = nullptr;	// Pointer to the swap chain.
+	ID3D11DeviceContext* pContext = nullptr;	// Pointer to the device context.
+	ID3D11RenderTargetView* pTarget = nullptr;	// Pointer to the render target.
 
 };
