@@ -4,13 +4,13 @@
 #include <sstream>
 #include "resource.h"
 
+
 // Window Class Stuff
 Window::WindowClass Window::WindowClass::wndClass;
 
-// Register the window class.
 Window::WindowClass::WindowClass() noexcept
 	:
-	hInst(GetModuleHandle(nullptr))	// Gets the handle to the instance.
+	hInst(GetModuleHandle(nullptr))
 {
 	WNDCLASSEX wc = { 0 };
 	wc.cbSize = sizeof(wc);
@@ -19,16 +19,21 @@ Window::WindowClass::WindowClass() noexcept
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = GetInstance();
-	wc.hIcon = static_cast<HICON>(LoadImage(hInst, MAKEINTRESOURCE(IDI_ICON1), IMAGE_ICON, 64, 64, 0));
+	wc.hIcon = static_cast<HICON>(LoadImage(
+		GetInstance(), MAKEINTRESOURCE(IDI_ICON1),
+		IMAGE_ICON, 32, 32, 0
+	));
 	wc.hCursor = nullptr;
 	wc.hbrBackground = nullptr;
 	wc.lpszMenuName = nullptr;
 	wc.lpszClassName = GetName();
-	wc.hIconSm = static_cast<HICON>(LoadImage(hInst, MAKEINTRESOURCE(IDI_ICON1), IMAGE_ICON, 16, 16, 0));
+	wc.hIconSm = static_cast<HICON>(LoadImage(
+		GetInstance(), MAKEINTRESOURCE(IDI_ICON1),
+		IMAGE_ICON, 16, 16, 0
+	));
 	RegisterClassEx(&wc);
 }
 
-// Unregister the window class.
 Window::WindowClass::~WindowClass()
 {
 	UnregisterClass(wndClassName, GetInstance());
@@ -57,18 +62,10 @@ Window::Window(int width, int height, const char* name)
 	wr.right = width + wr.left;
 	wr.top = 100;
 	wr.bottom = height + wr.top;
-
-	// Check for error.
 	if (AdjustWindowRect(&wr, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, FALSE) == 0)
 	{
 		throw GTWND_LAST_EXCEPT();
 	}
-	
-	// Throw Exceptions...
-	//throw GTWND_EXCEPT(ERROR_ARENA_TRASHED);
-	//throw std::runtime_error("Your program has crashed!!!");
-	//throw 6969;	// unknown exception.
-
 	// create window & get hWnd
 	hWnd = CreateWindow(
 		WindowClass::GetName(), name,
@@ -76,17 +73,14 @@ Window::Window(int width, int height, const char* name)
 		CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
 		nullptr, nullptr, WindowClass::GetInstance(), this
 	);
-
-	// Check for errors.
+	// check for error
 	if (hWnd == nullptr)
 	{
 		throw GTWND_LAST_EXCEPT();
 	}
-
-	// show window
+	// newly created windows start off as hidden
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
-
-	// Create Graphics object.
+	// create graphics object
 	pGfx = std::make_unique<Graphics>(hWnd);
 }
 
@@ -113,7 +107,7 @@ std::optional<int> Window::ProcessMessages() noexcept
 		if (msg.message == WM_QUIT)
 		{
 			// return optional wrapping int (arg to PostQuitMessage is in wparam) signals quit
-			return msg.wParam;
+			return (int)msg.wParam;
 		}
 
 		// TranslateMessage will post auxilliary WM_CHAR messages from key msgs
@@ -127,6 +121,10 @@ std::optional<int> Window::ProcessMessages() noexcept
 
 Graphics& Window::Gfx()
 {
+	if (!pGfx)
+	{
+		throw GTWND_NOGFX_EXCEPT();
+	}
 	return *pGfx;
 }
 
@@ -138,11 +136,11 @@ LRESULT CALLBACK Window::HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPAR
 		// extract ptr to window class from creation data
 		const CREATESTRUCTW* const pCreate = reinterpret_cast<CREATESTRUCTW*>(lParam);
 		Window* const pWnd = static_cast<Window*>(pCreate->lpCreateParams);
-		// set WinAPI-managed user data to store ptr to window class
+		// set WinAPI-managed user data to store ptr to window instance
 		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWnd));
 		// set message proc to normal (non-setup) handler now that setup is finished
 		SetWindowLongPtr(hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&Window::HandleMsgThunk));
-		// forward message to window class handler
+		// forward message to window instance handler
 		return pWnd->HandleMsg(hWnd, msg, wParam, lParam);
 	}
 	// if we get a message before the WM_NCCREATE message, handle with default handler
@@ -151,9 +149,9 @@ LRESULT CALLBACK Window::HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPAR
 
 LRESULT CALLBACK Window::HandleMsgThunk(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept
 {
-	// retrieve ptr to window class
+	// retrieve ptr to window instance
 	Window* const pWnd = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-	// forward message to window class handler
+	// forward message to window instance handler
 	return pWnd->HandleMsg(hWnd, msg, wParam, lParam);
 }
 
@@ -166,29 +164,28 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 	case WM_CLOSE:
 		PostQuitMessage(0);
 		return 0;
-		// Clear state when window loses focus to prevent input from getting stuck.
+		// clear keystate when window loses focus to prevent input getting "stuck"
 	case WM_KILLFOCUS:
 		kbd.ClearState();
 		break;
 
-		/**************** KEYBOARD MESSAGES ******************/
-		// Use fall-through behavior of C++ switches.
+		/*********** KEYBOARD MESSAGES ***********/
 	case WM_KEYDOWN:
-		// Syskey commands need to be handled to track ALT key (VK_MENU) and F10.
+		// syskey commands need to be handled to track ALT key (VK_MENU) and F10
 	case WM_SYSKEYDOWN:
-		if (!(lParam & 0x40000000 ) || kbd.AutorepeatIsEnabled()) // Filter autorepeat.
+		if (!(lParam & 0x40000000) || kbd.AutorepeatIsEnabled()) // filter autorepeat
 		{
 			kbd.OnKeyPressed(static_cast<unsigned char>(wParam));
 		}
 		break;
-	case WM_IME_KEYUP:
+	case WM_KEYUP:
 	case WM_SYSKEYUP:
 		kbd.OnKeyReleased(static_cast<unsigned char>(wParam));
 		break;
 	case WM_CHAR:
 		kbd.OnChar(static_cast<unsigned char>(wParam));
 		break;
-		/*************** END KEYBOARD MESSAGES *****************/
+		/*********** END KEYBOARD MESSAGES ***********/
 
 		/************* MOUSE MESSAGES ****************/
 	case WM_MOUSEMOVE:
@@ -236,12 +233,24 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 	{
 		const POINTS pt = MAKEPOINTS(lParam);
 		mouse.OnLeftReleased(pt.x, pt.y);
+		// release mouse if outside of window
+		if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height)
+		{
+			ReleaseCapture();
+			mouse.OnMouseLeave();
+		}
 		break;
 	}
 	case WM_RBUTTONUP:
 	{
 		const POINTS pt = MAKEPOINTS(lParam);
 		mouse.OnRightReleased(pt.x, pt.y);
+		// release mouse if outside of window
+		if (pt.x < 0 || pt.x >= width || pt.y < 0 || pt.y >= height)
+		{
+			ReleaseCapture();
+			mouse.OnMouseLeave();
+		}
 		break;
 	}
 	case WM_MOUSEWHEEL:
@@ -257,34 +266,13 @@ LRESULT Window::HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noe
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+
 // Window Exception Stuff
-Window::Exception::Exception(int line, const char* file, HRESULT hr) noexcept
-	:
-	GTException(line, file),
-	hr(hr)
-{}
-
-const char* Window::Exception::what() const noexcept
-{
-	std::ostringstream oss;
-	oss << GetType() << std::endl
-		<< "[Error Code] " << GetErrorCode() << std::endl
-		<< "[Description] " << GetErrorString() << std::endl
-		<< GetOriginString();
-	whatBuffer = oss.str();
-	return whatBuffer.c_str();
-}
-
-const char* Window::Exception::GetType() const noexcept
-{
-	return "GT3D Window Exception";
-}
-
 std::string Window::Exception::TranslateErrorCode(HRESULT hr) noexcept
 {
 	char* pMsgBuf = nullptr;
 	// windows will allocate memory for err string and make our pointer point to it
-	DWORD nMsgLen = FormatMessage(
+	const DWORD nMsgLen = FormatMessage(
 		FORMAT_MESSAGE_ALLOCATE_BUFFER |
 		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 		nullptr, hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
@@ -302,12 +290,42 @@ std::string Window::Exception::TranslateErrorCode(HRESULT hr) noexcept
 	return errorString;
 }
 
-HRESULT Window::Exception::GetErrorCode() const noexcept
+
+Window::HrException::HrException(int line, const char* file, HRESULT hr) noexcept
+	:
+	Exception(line, file),
+	hr(hr)
+{}
+
+const char* Window::HrException::what() const noexcept
+{
+	std::ostringstream oss;
+	oss << GetType() << std::endl
+		<< "[Error Code] 0x" << std::hex << std::uppercase << GetErrorCode()
+		<< std::dec << " (" << (unsigned long)GetErrorCode() << ")" << std::endl
+		<< "[Description] " << GetErrorDescription() << std::endl
+		<< GetOriginString();
+	whatBuffer = oss.str();
+	return whatBuffer.c_str();
+}
+
+const char* Window::HrException::GetType() const noexcept
+{
+	return "GT3D Window Exception";
+}
+
+HRESULT Window::HrException::GetErrorCode() const noexcept
 {
 	return hr;
 }
 
-std::string Window::Exception::GetErrorString() const noexcept
+std::string Window::HrException::GetErrorDescription() const noexcept
 {
-	return TranslateErrorCode(hr);
+	return Exception::TranslateErrorCode(hr);
+}
+
+
+const char* Window::NoGfxException::GetType() const noexcept
+{
+	return "GT3D Window Exception [No Graphics]";
 }

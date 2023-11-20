@@ -12,70 +12,73 @@
 #include <optional>
 #include <memory>
 
+
 class Window
 {
 public:
 	class Exception : public GTException
 	{
+		using GTException::GTException;
 	public:
-		Exception(int line, const char* file, HRESULT hr) noexcept;
-		const char* what() const noexcept override;
-		virtual const char* GetType() const noexcept;
 		static std::string TranslateErrorCode(HRESULT hr) noexcept;
+	};
+	class HrException : public Exception
+	{
+	public:
+		HrException(int line, const char* file, HRESULT hr) noexcept;
+		const char* what() const noexcept override;
+		const char* GetType() const noexcept override;
 		HRESULT GetErrorCode() const noexcept;
-		std::string GetErrorString() const noexcept;
-
+		std::string GetErrorDescription() const noexcept;
 	private:
 		HRESULT hr;
+	};
+	class NoGfxException : public Exception
+	{
+	public:
+		using Exception::Exception;
+		const char* GetType() const noexcept override;
 	};
 private:
 	// singleton manages registration/cleanup of window class
 	class WindowClass
 	{
 	public:
-		static const char* GetName() noexcept;	// Gets the name of the class.
-		static HINSTANCE GetInstance() noexcept;	// Gets the instance of the class.
+		static const char* GetName() noexcept;
+		static HINSTANCE GetInstance() noexcept;
 	private:
 		WindowClass() noexcept;
-		// Constructor that registers the window.
 		~WindowClass();
-		// Destructor that unregisters.
 		WindowClass(const WindowClass&) = delete;
 		WindowClass& operator=(const WindowClass&) = delete;
-		static constexpr const char* wndClassName = "GT3DClass";
-		static WindowClass wndClass;	// Static instance because only one window.
-		HINSTANCE hInst;	// Stores the instance.
+		static constexpr const char* wndClassName = "Chili Direct3D Engine Window";
+		static WindowClass wndClass;
+		HINSTANCE hInst;
 	};
 public:
 	Window(int width, int height, const char* name);
-	// Constructor to create the window.
 	~Window();
-	// Destroys the window.
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
 	void SetTitle(const std::string& title);
 	static std::optional<int> ProcessMessages() noexcept;
-	Graphics& Gfx();	// The construction of Gfx is deferred because hWnd is not aquired yet.
-						// So, accessor is created to access the embedded graphics.
+	Graphics& Gfx();
 private:
 	static LRESULT CALLBACK HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
-	// Only sets up the pointer to the instance and installs the second handler.
 	static LRESULT CALLBACK HandleMsgThunk(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
-	// Adapts from win32 calling convention to C++ member call convention.
 	LRESULT HandleMsg(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
-	// The Message handler.
-
 public:
 	Keyboard kbd;
 	Mouse mouse;
-
 private:
-	int width;	// Dimensions of the window.
+	int width;
 	int height;
-	HWND hWnd;	// Handle to the window.
-	std::unique_ptr<Graphics> pGfx;	// Pointer to Gfx. Allows Gfx to be deferred (postponed).
+	HWND hWnd;
+	std::unique_ptr<Graphics> pGfx;
 };
 
+
 // error exception helper macro
-#define GTWND_EXCEPT( hr ) Window::Exception( __LINE__,__FILE__,hr )
-#define GTWND_LAST_EXCEPT() Window::Exception( __LINE__,__FILE__,GetLastError() )
+#define GTWND_EXCEPT( hr ) Window::HrException( __LINE__,__FILE__,(hr) )
+#define GTWND_LAST_EXCEPT() Window::HrException( __LINE__,__FILE__,GetLastError() )
+#define GTWND_NOGFX_EXCEPT() Window::NoGfxException( __LINE__,__FILE__ )
